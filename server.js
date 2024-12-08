@@ -46,11 +46,13 @@ app.post('/add-user', (req, res) => {
   res.status(201).json({ message: 'User added successfully', user: newUser });
 });
 
-app.put('/update-photo', (req, res) => {
-  const { username, photo } = req.body;
+app.put('/update-profile', (req, res) => {
+  const { username, password, photo } = req.body;
   const user = users.find((u) => u.username === username);
 
   if (user) {
+    user.username = username;
+    user.password = password;
     user.photo = photo;
     res.status(200).json({ message: 'Photo updated successfully', user });
   } else {
