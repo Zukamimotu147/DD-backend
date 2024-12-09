@@ -44,10 +44,13 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
-  let photo = '';
+  if (!req.file) {
+    return res.status(400).json({ message: 'Photo is required' });
+  }
 
-  if (req.file) {
-    const file = req.file;
+  const file = req.file;
+
+  try {
     const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
       folder: 'sir-dd/users_profilepic',
     });
@@ -55,14 +58,14 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
     if (!uploadResponse || !uploadResponse.secure_url) {
       return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
     }
-
-    photo = uploadResponse.secure_url;
+  } catch (error) {
+    return res.status(400).json({ message: 'Photo upload failed' });
   }
 
   const newUser = {
     username,
     password,
-    photo,
+    photo: uploadResponse.secure_url,
   };
 
   users.push(newUser);
