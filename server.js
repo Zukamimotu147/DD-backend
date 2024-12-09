@@ -2,12 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import cloudinary from 'cloudinary';
-import dotenv from 'dotenv';
 
 const app = express();
 const PORT = 3000;
-
-dotenv.config();
 
 app.use(cors());
 app.use(express.json());
