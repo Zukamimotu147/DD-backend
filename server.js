@@ -4,10 +4,10 @@ import multer from 'multer';
 import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
 
-dotenv.config();
-
 const app = express();
 const PORT = 3000;
+
+dotenv.config();
 
 app.use(cors());
 app.use(express.json());
@@ -85,34 +85,34 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
   }
 });
 
-app.put('/update-profile', upload.single('photo'), async (req, res) => {
-  const { username, password } = req.body;
-  const user = users.find((u) => u.username === username);
+// app.put('/update-profile', upload.single('photo'), async (req, res) => {
+//   const { username, password } = req.body;
+//   const user = users.find((u) => u.username === username);
 
-  let updatedPhoto = '';
+//   let updatedPhoto = '';
 
-  if (req.file) {
-    const file = req.file;
-    const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
-      folder: 'sir-dd/users_profilepic',
-    });
+//   if (req.file) {
+//     const file = req.file;
+//     const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
+//       folder: 'sir-dd/users_profilepic',
+//     });
 
-    if (!uploadResponse || !uploadResponse.secure_url) {
-      return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
-    }
+//     if (!uploadResponse || !uploadResponse.secure_url) {
+//       return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
+//     }
 
-    updatedPhoto = uploadResponse.secure_url;
-  }
+//     updatedPhoto = uploadResponse.secure_url;
+//   }
 
-  if (user) {
-    user.username = username;
-    user.password = password;
-    user.photo = updatedPhoto;
-    res.status(200).json({ message: 'Photo updated successfully', user });
-  } else {
-    res.status(404).json({ message: 'User not found' });
-  }
-});
+//   if (user) {
+//     user.username = username;
+//     user.password = password;
+//     user.photo = updatedPhoto;
+//     res.status(200).json({ message: 'Photo updated successfully', user });
+//   } else {
+//     res.status(404).json({ message: 'User not found' });
+//   }
+// });
 
 app.get('/users', (req, res) => {
   res.status(200).json(users);
