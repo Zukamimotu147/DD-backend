@@ -39,7 +39,6 @@ app.post('/login', (req, res) => {
 app.post('/add-user', upload.single('photo'), async (req, res) => {
   const { username, password } = req.body;
 
-  // Validate fields
   if (!username || !password || !req.file) {
     return res.status(400).json({ message: 'All fields are required' });
   }
@@ -49,7 +48,6 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
   }
 
   try {
-    // Upload photo to Cloudinary
     const uploadResponse = await cloudinary.v2.uploader.upload_stream(
       { folder: 'sir-dd/users_profilepic' },
       (error, result) => {
@@ -62,7 +60,6 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
           return res.status(500).json({ message: 'Photo URL missing after upload' });
         }
 
-        // Add user after successful photo upload
         const newUser = {
           username,
           password,
@@ -74,7 +71,6 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
       }
     );
 
-    // Pipe file buffer to upload stream
     uploadResponse.end(req.file.buffer);
   } catch (error) {
     console.error('Error during user creation:', error);
@@ -82,34 +78,40 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
   }
 });
 
-// app.put('/update-profile', upload.single('photo'), async (req, res) => {
-//   const { username, password } = req.body;
-//   const user = users.find((u) => u.username === username);
+app.put('/update-profile', upload.single('photo'), async (req, res) => {
+  const { username, password } = req.body;
 
-//   let updatedPhoto = '';
+  const user = users.find((u) => u.username === username);
 
-//   if (req.file) {
-//     const file = req.file;
-//     const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
-//       folder: 'sir-dd/users_profilepic',
-//     });
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
 
-//     if (!uploadResponse || !uploadResponse.secure_url) {
-//       return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
-//     }
+  let updatedPhoto = user.photo;
 
-//     updatedPhoto = uploadResponse.secure_url;
-//   }
+  if (req.file) {
+    const file = req.file;
+    try {
+      const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
+        folder: 'sir-dd/users_profilepic',
+      });
 
-//   if (user) {
-//     user.username = username;
-//     user.password = password;
-//     user.photo = updatedPhoto;
-//     res.status(200).json({ message: 'Photo updated successfully', user });
-//   } else {
-//     res.status(404).json({ message: 'User not found' });
-//   }
-// });
+      if (!uploadResponse || !uploadResponse.secure_url) {
+        return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
+      }
+
+      updatedPhoto = uploadResponse.secure_url;
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      return res.status(500).json({ message: 'Photo upload failed', error });
+    }
+  }
+  user.username = username;
+  user.password = password;
+  user.photo = updatedPhoto;
+
+  res.status(200).json({ message: 'Profile updated successfully', user });
+});
 
 app.get('/users', (req, res) => {
   res.status(200).json(users);
