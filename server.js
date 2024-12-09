@@ -48,16 +48,12 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
   }
 
   try {
-    const uploadResponse = await cloudinary.v2.uploader.upload_stream(
+    const uploadStream = cloudinary.v2.uploader.upload_stream(
       { folder: 'sir-dd/users_profilepic' },
       (error, result) => {
         if (error) {
           console.error('Cloudinary upload error:', error);
           return res.status(500).json({ message: 'Photo upload failed' });
-        }
-
-        if (!result.secure_url) {
-          return res.status(500).json({ message: 'Photo URL missing after upload' });
         }
 
         const newUser = {
@@ -71,7 +67,7 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
       }
     );
 
-    uploadResponse.end(req.file.buffer);
+    uploadStream.end(req.file.buffer);
   } catch (error) {
     console.error('Error during user creation:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -90,27 +86,33 @@ app.put('/update-profile', upload.single('photo'), async (req, res) => {
   let updatedPhoto = user.photo;
 
   if (req.file) {
-    const file = req.file;
     try {
-      const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
-        folder: 'sir-dd/users_profilepic',
-      });
+      const uploadStream = cloudinary.v2.uploader.upload_stream(
+        { folder: 'sir-dd/users_profilepic' },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            return res.status(500).json({ message: 'Photo upload failed' });
+          }
 
-      if (!uploadResponse || !uploadResponse.secure_url) {
-        return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
-      }
+          updatedPhoto = result.secure_url;
+          user.photo = updatedPhoto;
+          user.username = username;
+          user.password = password;
+          res.status(200).json({ message: 'Profile updated successfully', user });
+        }
+      );
 
-      updatedPhoto = uploadResponse.secure_url;
+      uploadStream.end(req.file.buffer);
     } catch (error) {
       console.error('Error uploading to Cloudinary:', error);
       return res.status(500).json({ message: 'Photo upload failed', error });
     }
+  } else {
+    user.username = username;
+    user.password = password;
+    res.status(200).json({ message: 'Profile updated successfully', user });
   }
-  user.username = username;
-  user.password = password;
-  user.photo = updatedPhoto;
-
-  res.status(200).json({ message: 'Profile updated successfully', user });
 });
 
 app.get('/users', (req, res) => {
