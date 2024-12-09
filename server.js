@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import cloudinary from 'cloudinary';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
@@ -23,12 +26,7 @@ cloudinary.v2.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = multer.diskStorage({
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  },
-});
-
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 app.post('/login', (req, res) => {
@@ -44,40 +42,47 @@ app.post('/login', (req, res) => {
 app.post('/add-user', upload.single('photo'), async (req, res) => {
   const { username, password } = req.body;
 
+  // Validate fields
+  if (!username || !password || !req.file) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
   if (users.find((u) => u.username === username)) {
     return res.status(400).json({ message: 'User already exists' });
   }
 
-  if (!username || !password) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ message: 'Photo is required' });
-  }
-
-  const file = req.file;
-
   try {
-    const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
-      folder: 'sir-dd/users_profilepic',
-    });
+    // Upload photo to Cloudinary
+    const uploadResponse = await cloudinary.v2.uploader.upload_stream(
+      { folder: 'sir-dd/users_profilepic' },
+      (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return res.status(500).json({ message: 'Photo upload failed' });
+        }
 
-    if (!uploadResponse || !uploadResponse.secure_url) {
-      return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
-    }
+        if (!result.secure_url) {
+          return res.status(500).json({ message: 'Photo URL missing after upload' });
+        }
+
+        // Add user after successful photo upload
+        const newUser = {
+          username,
+          password,
+          photo: result.secure_url,
+        };
+
+        users.push(newUser);
+        res.status(201).json({ message: 'User added successfully', user: newUser });
+      }
+    );
+
+    // Pipe file buffer to upload stream
+    uploadResponse.end(req.file.buffer);
   } catch (error) {
-    return res.status(400).json({ message: 'Photo upload failed' });
+    console.error('Error during user creation:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-
-  const newUser = {
-    username,
-    password,
-    photo: uploadResponse.secure_url,
-  };
-
-  users.push(newUser);
-  res.status(201).json({ message: 'User added successfully', user: newUser });
 });
 
 app.put('/update-profile', upload.single('photo'), async (req, res) => {
