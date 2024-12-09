@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-
+import multer from 'multer';
 const app = express();
 const PORT = 3000;
 
@@ -15,6 +15,14 @@ let users = [
   },
 ];
 
+const storage = multer.diskStorage({
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const user = users.find((u) => u.username === username && u.password === password);
@@ -25,8 +33,8 @@ app.post('/login', (req, res) => {
   }
 });
 
-app.post('/add-user', (req, res) => {
-  const { username, password, photo } = req.body;
+app.post('/add-user', upload.single('photo'), async (req, res) => {
+  const { username, password } = req.body;
 
   if (users.find((u) => u.username === username)) {
     return res.status(400).json({ message: 'User already exists' });
@@ -34,6 +42,21 @@ app.post('/add-user', (req, res) => {
 
   if (!username || !password || !photo) {
     return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  let photo = '';
+
+  if (req.file) {
+    const file = req.file;
+    const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
+      folder: 'sir-dd/users_profilepic',
+    });
+
+    if (!uploadResponse || !uploadResponse.secure_url) {
+      return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
+    }
+
+    photo = uploadResponse.secure_url;
   }
 
   const newUser = {
@@ -46,14 +69,29 @@ app.post('/add-user', (req, res) => {
   res.status(201).json({ message: 'User added successfully', user: newUser });
 });
 
-app.put('/update-profile', (req, res) => {
-  const { username, password, photo } = req.body;
+app.put('/update-profile', upload.single('photo'), async (req, res) => {
+  const { username, password } = req.body;
   const user = users.find((u) => u.username === username);
+
+  let updatedPhoto = '';
+
+  if (req.file) {
+    const file = req.file;
+    const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
+      folder: 'sir-dd/users_profilepic',
+    });
+
+    if (!uploadResponse || !uploadResponse.secure_url) {
+      return res.status(400).json({ message: 'Photo upload failed, URL is empty' });
+    }
+
+    updatedPhoto = uploadResponse.secure_url;
+  }
 
   if (user) {
     user.username = username;
     user.password = password;
-    user.photo = photo;
+    user.photo = updatedPhoto;
     res.status(200).json({ message: 'Photo updated successfully', user });
   } else {
     res.status(404).json({ message: 'User not found' });
