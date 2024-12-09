@@ -48,7 +48,7 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
     return res.status(400).json({ message: 'User already exists' });
   }
 
-  if (!username || !password || !photo) {
+  if (!username || !password) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
