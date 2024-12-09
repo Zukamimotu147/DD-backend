@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import { cloudinary } from './config/cloudinary';
 const app = express();
 const PORT = 3000;
 
