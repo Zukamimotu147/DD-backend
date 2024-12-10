@@ -11,6 +11,7 @@ app.use(express.json());
 
 let users = [
   {
+    id: 1,
     username: 'hello',
     password: 'world',
     photo: 'https://randomuser.me/api/portraits/men/6.jpg',
@@ -57,6 +58,7 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
         }
 
         const newUser = {
+          id: users.length + 1,
           username,
           password,
           photo: result.secure_url,
@@ -74,10 +76,11 @@ app.post('/add-user', upload.single('photo'), async (req, res) => {
   }
 });
 
-app.put('/update-profile', upload.single('photo'), async (req, res) => {
+app.put('/update-profile/:id', upload.single('photo'), async (req, res) => {
   const { username, password } = req.body;
+  const id = parseInt(req.params.id);
 
-  const user = users.find((u) => u.username === username);
+  const user = users.find((u) => u.id === id);
 
   if (!user) {
     return res.status(404).json({ message: 'User not found' });
